@@ -5,6 +5,9 @@
 	// If you want to send to another email address
 	// $reader->set_notify("[alternate email address]");
 
+	// Default is not to delete starred items; this enables deletion
+	$reader->set_delete(TRUE);
+
 	echo $reader->listStarred();
 
 	class GReader {
@@ -15,6 +18,7 @@
 		private $_sid;
 
 		private $_notify;
+		private $_delete;
 
 		private $_token;
 		private $_cookie;
@@ -26,6 +30,8 @@
 
 			if ( $this->_valid_email($username) )
 				$this->_notify = $username;
+
+			$this->_delete = FALSE;
 
 			$this->_connect();
   		}
@@ -158,31 +164,42 @@
 			else
 				print "$BODY\n";
 
-			foreach($ITEMS as $ID => $FEED) {
+			if ( !empty($this->_delete) ) {
 
-				$this->_getToken();
+				foreach($ITEMS as $ID => $FEED) {
 
-				$STRING="r=user/-/state/com.google/starred&async=true&s={$FEED}&i={$ID}&T={$this->_token}";
+					$this->_getToken();
 
-				$ch = curl_init();
-				curl_setopt($ch,CURLOPT_URL, 'https://www.google.com/reader/api/0/edit-tag?client={$this->_username}');
-				curl_setopt($ch,CURLOPT_HTTPHEADER, array("Authorization: GoogleLogin auth={$this->_auth}"));
-				curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
-				curl_setopt($ch,CURLOPT_POST,true);
-				curl_setopt($ch,CURLOPT_POSTFIELDS,$STRING);
-				curl_setopt ($ch, CURLOPT_FOLLOWLOCATION, true);
+					$STRING="r=user/-/state/com.google/starred&async=true&s={$FEED}&i={$ID}&T={$this->_token}";
 
-				ob_start();
+					$ch = curl_init();
+					curl_setopt($ch,CURLOPT_URL, 'https://www.google.com/reader/api/0/edit-tag?client={$this->_username}');
+					curl_setopt($ch,CURLOPT_HTTPHEADER, array("Authorization: GoogleLogin auth={$this->_auth}"));
+					curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
+					curl_setopt($ch,CURLOPT_POST,true);
+					curl_setopt($ch,CURLOPT_POSTFIELDS,$STRING);
+					curl_setopt ($ch, CURLOPT_FOLLOWLOCATION, true);
 
-				try {
-					curl_exec($ch);
-					curl_close($ch);
-					$data = ob_get_contents();
-					ob_end_clean();
-				} catch(Exception $err) {
-					$data = null;
+					ob_start();
+
+					try {
+						curl_exec($ch);
+						curl_close($ch);
+						$data = ob_get_contents();
+						ob_end_clean();
+					} catch(Exception $err) {
+						$data = null;
+					}
 				}
 			}
+		}
+
+		public function set_delete($state) {
+
+			if ( empty($state) )
+				$this->_delete = FALSE;
+			else
+				$this->_delete = TRUE;
 		}
 
 		public function set_notify($email) {
@@ -190,6 +207,5 @@
 			if ( $this->_valid_email($email) )
 				$this->_notify = $email;
 		}
-
 	}
 ?>
